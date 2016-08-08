@@ -1,0 +1,114 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>黑白、反转、皮肤</title>
+        <style>
+            * {margin: 0; padding: 0;}
+            .filePickerBox {float:left; position: relative;width: 100px;height: 40px;color: #FFF;background: cornflowerblue;line-height: 40px;text-align: center;border-radius: 5px;box-shadow: 1px 1px 5px cornflowerblue;}
+            .filePickerButton {position: absolute;top: 0; left: 0;width: 100px;height: 40px;overflow: hidden;}
+            .filePickerButton input {position: absolute;clip: rect(1px 1px 1px 1px);}
+            .filePickerButton label {display: block;width: 100%;height: 100%;cursor: pointer;background: #FFF;opacity: 0;-moz-opacity: 0;-khtml-opacity: 0;filter: alpha(Opacity=0);}
+            .fileBox img {max-width: 100%; max-height: 100%;}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            
+            <div class="filePickerBox">
+                选择文件
+                <div class="filePickerButton">
+                    <input type="file" accept="image/*" multiple="false" id="filePicker">
+                    <label id="button"></label>
+                </div>
+                <select name="transform-type" id="type">
+                    <option value="0">--选择--</option>
+                    <option value="1">原图</option>
+                    <option value="2">黑白</option>
+                    <option value="3">反转</option>
+                    <option value="4">皮肤</option>
+                </select>
+            </div>
+            <div class="fileBox">
+                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs%3D">
+            </div>
+        </div>
+        <script>
+            window.onload = function() {
+                var type = document.getElementById('type');
+                var file = document.getElementById('filePicker');
+                var button = document.getElementById('button');
+                var imgElem = document.getElementsByTagName('img')[0];
+                button.addEventListener('click', function() {
+                    file.click();
+                });
+                type.addEventListener('change', function() {
+                        console.log(file.files)
+                    if(type.value == "0" || file.files[0] == null) return false;
+                    transform(file.files[0], type.value);
+                });
+                file.addEventListener('change', function(e) {
+                    transform(e.target.files[0], type.value);
+                });
+                var loadFromBlob = function() {
+                    var urlAPI = window.createObjectURL && window ||
+                        window.URL && URL.revokeObjectURL && URL ||
+                        window.webkitURL,
+                    createObjectURL = function(){};
+                    if(urlAPI) {
+                        return urlAPI.createObjectURL.apply(urlAPI, arguments);
+                    }
+                    return null;
+                }
+                var transform = function(file, type) {
+                    var canvas = document.createElement('canvas');
+                    var ctx = canvas.getContext('2d');
+                    var img = new Image;
+                    var newImage = null;
+                    var data = null;
+                    var i, len, r, g, b, a, y;
+                    type = type || 1;
+                    img.onload = function() {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        newImage = ctx.getImageData(0, 0, img.width, img.height)
+                        data = newImage.data;
+                        for(i=0, len=data.length; i<len; i+=4) {
+                            r = data[i];
+                            g = data[i+1];
+                            b = data[i+2];
+                            a = data[i+3];
+                            
+                            y = (r* 4899 + g * 9617 + b* 1868 + 8192) >> 14;
+                            switch(type) {
+                                case "2"://去色
+                                    data[i] = data[i+1] = data[i+2] = y;
+                                    break;
+                                case "3"://反转
+                                    data[i] = 255 - r;
+                                    data[i+1] = 255 - g;
+                                    data[i+2] = 255 - b;
+                                    break;
+                                case "4"://皮肤
+                                    var cb = -0.148*r - 0.291*g + 0.439*b + 128
+                                    var cr = 0.439*r - 0.368*g - 0.071*b + 128
+                                    if(97.5 <= cb && cb <= 142.5 && 134 <= cr && cr <= 176) {
+                                        data[i] = data[i+1] = data[i+2] = 255;
+                                    }else{
+                                        data[i] = data[i+1] = data[i+2] = 0;
+                                    }
+                                    break;
+                            }
+                            data[i+3] = a;
+                        }
+                        ctx.clearRect(0, 0, img.width, img.height);
+                        ctx.putImageData(newImage, 0, 0);
+                        imgElem.src = canvas.toDataURL('image/jpeg', 0.8);
+                    }
+                    img.src = loadFromBlob(file);
+                }
+            }
+        </script>
+    </body>
+</html>
